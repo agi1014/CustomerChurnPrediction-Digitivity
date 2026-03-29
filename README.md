@@ -62,8 +62,33 @@ StandardScaler distributions and before-after data plots were mapped to ensure f
 
 ![Data Preprocessing](images/plot_3.png)
 
+## 6. Interactive Web Application UI
 
-## 6. Instructions for Running the Notebook
+A real-time, interactive Glassmorphism web application was built using FastAPI and Vanilla JS to allow users to directly test customer inputs against the trained XGBoost model.
+
+### Dashboard Previews & Demo
+You can dynamically alter variables (e.g., Support Calls, Total Spend) to see the model shift confidence and classifications in real-time.
+
+*![High Risk Churn Output](images/ui_churn.png)*
+
+*![Healthy Retained Output](images/ui_retained.png)*
+
+*(Note: See the included images directory for high-res dashboard captures).*
+
+### How to Run the App Yourself
+To launch the interactive dashboard locally:
+1. Ensure you have the required dependencies:
+   ```bash
+   pip install fastapi uvicorn xgboost scikit-learn pandas joblib
+   ```
+2. Navigate to the `app` directory and start the server:
+   ```bash
+   cd app
+   uvicorn main:app
+   ```
+3. Open your browser and navigate to the endpoint: **[http://127.0.0.1:8000/](http://127.0.0.1:8000/)**
+
+## 7. Instructions for Running the Notebook
 
 To explore the analysis, train the models, and generate the plots yourself:
 

@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Churn Predictor</title>
+    <style>
+        :root {
+            --bg-grad-1: #0f172a;
+            --bg-grad-2: #1e1b4b;
+            --neon-blue: #38bdf8;
+            --neon-pink: #ec4899;
+            --success: #10b981;
+            --danger: #ef4444;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, var(--bg-grad-1), var(--bg-grad-2));
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Abstract ambient background blur */
+        .ambient-light {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: var(--neon-blue);
+            filter: blur(150px);
+            opacity: 0.3;
+            border-radius: 50%;
+            top: -100px;
+            left: -100px;
+            z-index: 0;
+            animation: float 10s infinite ease-in-out alternate;
+        }
+        .ambient-light-2 {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: var(--neon-pink);
+            filter: blur(150px);
+            opacity: 0.2;
+            border-radius: 50%;
+            bottom: -100px;
+            right: -100px;
+            z-index: 0;
+            animation: float 12s infinite ease-in-out alternate-reverse;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        .container {
+            position: relative;
+            z-index: 10;
+            max-width: 900px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .container { grid-template-columns: 1fr; }
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 2.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease, border-color 0.3s;
+        }
+        
+        .glass-card:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-5px);
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        p.subtitle {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+        }
+
+        form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+        
+        @media (max-width: 500px) { form { grid-template-columns: 1fr; } }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .input-group.full-width { grid-column: 1 / -1; }
+
+        label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #cbd5e1;
+            font-weight: 600;
+        }
+
+        input, select {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            color: white;
+            padding: 0.8rem 1rem;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+        }
+        
+        option { background: #1e293b; color: white; }
+
+        button {
+            background: linear-gradient(to right, var(--neon-blue), #818cf8);
+            color: white;
+            border: none;
+            padding: 1rem;
+            font-size: 1rem;
+            font-weight: 700;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            grid-column: 1 / -1;
+            box-shadow: 0 4px 14px 0 rgba(56, 189, 248, 0.39);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(56, 189, 248, 0.5);
+            background: linear-gradient(to right, #7dd3fc, #a5b4fc);
+        }
+
+        button:active { transform: translateY(0); }
+
+        .result-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .result-circle {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0,0,0,0.3);
+            border: 4px solid var(--glass-border);
+            margin-bottom: 2rem;
+            position: relative;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .result-circle::before {
+            content: '';
+            position: absolute;
+            top: -10px; left: -10px; right: -10px; bottom: -10px;
+            border-radius: 50%;
+            background: transparent;
+            z-index: -1;
+            transition: all 0.5s ease;
+            opacity: 0;
+            filter: blur(20px);
+        }
+
+        .status-churn .result-circle { border-color: var(--danger); box-shadow: 0 0 40px rgba(239, 68, 68, 0.4); }
+        .status-churn .result-circle::before { background: var(--danger); opacity: 0.5; }
+        
+        .status-retained .result-circle { border-color: var(--success); box-shadow: 0 0 40px rgba(16, 185, 129, 0.4); }
+        .status-retained .result-circle::before { background: var(--success); opacity: 0.5; }
+
+        .status-text {
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.2rem;
+        }
+        
+        .confidence { font-size: 1.2rem; color: #94a3b8; }
+
+        .insights { margin-top: 1rem; color: #cbd5e1; font-size: 0.95rem; line-height: 1.6; }
+        
+        /* Spinner for loading */
+        .spinner {
+            display: none;
+            width: 40px; height: 40px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-left-color: #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+    <div class="ambient-light"></div>
+    <div class="ambient-light-2"></div>
+
+    <div class="container">
+        <!-- Input Form -->
+        <div class="glass-card">
+            <h1>Customer Profile</h1>
+            <p class="subtitle">Enter unseen test data to predict churn risk</p>
+
+            <form id="predictionForm">
+                <div class="input-group">
+                    <label>Age</label>
+                    <input type="number" id="age" required min="18" max="100" value="35">
+                </div>
+                
+                <div class="input-group">
+                    <label>Gender</label>
+                    <select id="gender" required>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label>Tenure (Months)</label>
+                    <input type="number" id="tenure" required min="0" value="24">
+                </div>
+
+                <div class="input-group">
+                    <label>Usage Frequency</label>
+                    <input type="number" id="usage" required min="0" value="10">
+                </div>
+
+                <div class="input-group">
+                    <label>Support Calls</label>
+                    <input type="number" id="support" required min="0" value="2">
+                </div>
+
+                <div class="input-group">
+                    <label>Payment Delay (Days)</label>
+                    <input type="number" id="delay" required min="0" max="60" value="0">
+                </div>
+
+                <div class="input-group">
+                    <label>Subscription Type</label>
+                    <select id="subType" required>
+                        <option value="Basic">Basic</option>
+                        <option value="Standard">Standard</option>
+                        <option value="Premium">Premium</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label>Contract Length</label>
+                    <select id="contract" required>
+                        <option value="Monthly">Monthly</option>
+                        <option value="Quarterly">Quarterly</option>
+                        <option value="Annual">Annual</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label>Total Spend ($)</label>
+                    <input type="number" step="0.01" id="spend" required min="0" value="500">
+                </div>
+
+                <div class="input-group">
+                    <label>Last Interaction (Days)</label>
+                    <input type="number" id="lastInt" required min="0" value="5">
+                </div>
+
+                <button type="submit" id="submitBtn">Generate AI Prediction</button>
+            </form>
+        </div>
+
+        <!-- Result Display -->
+        <div class="glass-card result-card" id="resultContainer">
+            <h1>Prediction Engine</h1>
+            <p class="subtitle">XGBoost Decision Output</p>
+            
+            <div class="spinner" id="spinner"></div>
+
+            <div id="resultContent" style="display: none; align-items: center; flex-direction: column;">
+                <div class="result-circle" id="resultCircle">
+                    <div class="status-text" id="statusText">--</div>
+                    <div class="confidence" id="confidenceVal">--%</div>
+                </div>
+                
+                <div class="insights" id="insightsData">
+                    Ready to analyze customer data.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('predictionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btn = document.getElementById('submitBtn');
+            const spinner = document.getElementById('spinner');
+            const resultContent = document.getElementById('resultContent');
+            const resultContainer = document.getElementById('resultContainer');
+            
+            // UI Loading state
+            btn.disabled = true;
+            btn.innerText = 'Analyzing Data...';
+            resultContent.style.display = 'none';
+            spinner.style.display = 'block';
+            resultContainer.className = 'glass-card result-card'; // reset classes
+
+            // Gather data from inputs
+            const payload = {
+                age: parseFloat(document.getElementById('age').value),
+                gender: document.getElementById('gender').value,
+                tenure: parseFloat(document.getElementById('tenure').value),
+                usage_frequency: parseFloat(document.getElementById('usage').value),
+                support_calls: parseFloat(document.getElementById('support').value),
+                payment_delay: parseFloat(document.getElementById('delay').value),
+                subscription_type: document.getElementById('subType').value,
+                contract_length: document.getElementById('contract').value,
+                total_spend: parseFloat(document.getElementById('spend').value),
+                last_interaction: parseFloat(document.getElementById('lastInt').value)
+            };
+
+            try {
+                // Fetch to FastAPI backend
+                const response = await fetch('http://127.0.0.1:8000/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                // Hide spinner, show content
+                spinner.style.display = 'none';
+                resultContent.style.display = 'flex';
+                btn.disabled = false;
+                btn.innerText = 'Generate AI Prediction';
+
+                // Update UI based on Churn or Retained
+                document.getElementById('statusText').innerText = data.status;
+                document.getElementById('confidenceVal').innerText = data.confidence + '%';
+                
+                if(data.status === 'CHURN') {
+                    resultContainer.classList.add('status-churn');
+                    document.getElementById('insightsData').innerHTML = `
+                        <strong>High Risk Account Detected.</strong> <br>
+                        Immediate retention protocol recommended. The model predicts a ${data.confidence}% likelihood that this customer will abandon their subscription.
+                    `;
+                } else {
+                    resultContainer.classList.add('status-retained');
+                    document.getElementById('insightsData').innerHTML = `
+                        <strong>Healthy Account Detected.</strong> <br>
+                        Customer is showing positive engagement metrics. Maintain current relationship cadence.
+                    `;
+                }
+
+            } catch (error) {
+                console.error("Error:", error);
+                spinner.style.display = 'none';
+                btn.disabled = false;
+                btn.innerText = 'Retry Prediction';
+                alert("Failed to connect to the prediction server. Make sure the FastAPI backend is running.");
+            }
+        });
+        
+        // Trigger initial empty load visual
+        document.getElementById('resultContent').style.display = 'flex';
+        document.getElementById('statusText').innerText = "IDLE";
+        document.getElementById('confidenceVal').innerText = "0%";
+    </script>
+</body>
+</html>
