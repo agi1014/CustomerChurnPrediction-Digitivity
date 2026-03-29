@@ -23,7 +23,9 @@ During the Data Challenges Visualization step, the following key characteristics
 ### Advanced Algorithms (LightGBM & XGBoost)
 We selected **LightGBM** and **XGBoost** because gradient-boosted decision trees are the state-of-the-art for tabular data.
 * **LightGBM:** Utilizes a leaf-wise tree growth algorithm, making it exceptionally fast for training on large datasets while restricting memory usage.
+![LightGBM Architecture](images/lightgbm_architecture.png)
 * **XGBoost (with histogram tree method):** Utilizes depth-wise tree growth with a `hist` tree method, providing highly optimized and parallelized exact greedy algorithms for split finding. 
+![XGBoost Architecture](images/xgboost_architecture.png)
 * **Justification:** Both models natively handle non-linear relationships, perform implicitly well without extensive feature scaling, and are rigorously optimized for CPU Cache, making them the most computationally efficient choice for this ~500k row dataset.
 
 ## 4. Model Comparison Summary
