@@ -88,7 +88,7 @@ To launch the interactive dashboard locally:
    cd app
    uvicorn main:app
    ```
-3. Open your browser and navigate to the endpoint: **[http://127.0.0.1:8000/](http://127.0.0.1:8000/)**
+3. Open your browser and navigate to the endpoint: **[https://app-seven-omega-74.vercel.app/)**
 
 ## 7. Instructions for Running the Notebook
 
