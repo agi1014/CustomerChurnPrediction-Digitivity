@@ -66,6 +66,8 @@ StandardScaler distributions and before-after data plots were mapped to ensure f
 
 A real-time, interactive Glassmorphism web application was built using FastAPI and Vanilla JS to allow users to directly test customer inputs against the trained XGBoost model.
 
+**🚀 Live Demo:** [https://app-seven-omega-74.vercel.app/](https://app-seven-omega-74.vercel.app/)
+
 ### Dashboard Previews & Demo
 You can dynamically alter variables (e.g., Support Calls, Total Spend) to see the model shift confidence and classifications in real-time.
 

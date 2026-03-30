@@ -1,28 +1,16 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-import pandas as pd
-import joblib
+import model_code
 import os
 
 app = FastAPI(title="Customer Churn Prediction API")
 
-# Load model and scaler
-try:
-    scaler = joblib.load('models/scaler.pkl')
-    model = joblib.load('models/xgboost_model.pkl')
-    print("Model and scaler loaded successfully.")
-except Exception as e:
-    print(f"Error loading model: {e}")
-    scaler, model = None, None
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Expected order of features based on training
-EXPECTED_COLUMNS = [
-    'Age', 'Tenure', 'Usage Frequency', 'Support Calls', 'Payment Delay', 
-    'Total Spend', 'Last Interaction', 'Gender_Male', 
-    'Subscription Type_Premium', 'Subscription Type_Standard', 
-    'Contract Length_Monthly', 'Contract Length_Quarterly'
-]
+# Custom Scaler values extracted to avoid loading scikit-learn
+SCALER_MEAN = [39.37315349157956, 31.25633574695122, 15.80749355763647, 3.6044366107723578, 12.965721635452962, 631.6162227787459, 14.480867995063878, 0.567681112078978, 0.3372668045876887, 0.3382876016260163, 0.19759001161440184, 0.4004473359465738]
+SCALER_SCALE = [12.442355378487592, 17.255707813258432, 8.586231906503338, 3.0702143953875822, 8.258053151045662, 240.80272799709104, 8.596197933037589, 0.4953980894873868, 0.4727768047513526, 0.4731269387935271, 0.3981811132193772, 0.4899890479182832]
 
 class CustomerData(BaseModel):
     age: float
@@ -38,40 +26,30 @@ class CustomerData(BaseModel):
 
 @app.post("/predict")
 async def predict_churn(data: CustomerData):
-    if not model or not scaler:
-        raise HTTPException(status_code=500, detail="Model is not loaded.")
-        
     try:
-        # 1. Transform input JSON into a dictionary
-        input_dict = {
-            'Age': data.age,
-            'Tenure': data.tenure,
-            'Usage Frequency': data.usage_frequency,
-            'Support Calls': data.support_calls,
-            'Payment Delay': data.payment_delay,
-            'Total Spend': data.total_spend,
-            'Last Interaction': data.last_interaction,
-            
-            # One-hot encoding logic matching training
-            'Gender_Male': 1 if data.gender.lower() == 'male' else 0,
-            'Subscription Type_Premium': 1 if data.subscription_type.lower() == 'premium' else 0,
-            'Subscription Type_Standard': 1 if data.subscription_type.lower() == 'standard' else 0,
-            'Contract Length_Monthly': 1 if data.contract_length.lower() == 'monthly' else 0,
-            'Contract Length_Quarterly': 1 if data.contract_length.lower() == 'quarterly' else 0
-        }
+        # 1. Extract features into a raw list in the exact expected order
+        features = [
+            data.age,
+            data.tenure,
+            data.usage_frequency,
+            data.support_calls,
+            data.payment_delay,
+            data.total_spend,
+            data.last_interaction,
+            1.0 if data.gender.lower() == 'male' else 0.0,
+            1.0 if data.subscription_type.lower() == 'premium' else 0.0,
+            1.0 if data.subscription_type.lower() == 'standard' else 0.0,
+            1.0 if data.contract_length.lower() == 'monthly' else 0.0,
+            1.0 if data.contract_length.lower() == 'quarterly' else 0.0
+        ]
         
-        # 2. Convert to DataFrame to ensure correct column order
-        df = pd.DataFrame([input_dict], columns=EXPECTED_COLUMNS)
+        # 2. Scale features manually using standard Python math
+        X_scaled = [(f - m) / s for f, m, s in zip(features, SCALER_MEAN, SCALER_SCALE)]
         
-        # Fill any missing with 0 (failsafe)
-        df = df.fillna(0)
+        # 3. Predict via pure Python model (Zero dependencies!)
+        probability = model_code.score(X_scaled)
         
-        # 3. Scale features
-        X_scaled = scaler.transform(df)
-        
-        # 4. Predict
-        prediction = model.predict(X_scaled)[0]
-        probability = model.predict_proba(X_scaled)[0]
+        prediction = 1 if probability[1] > 0.5 else 0
         
         churn_status = "CHURN" if prediction == 1 else "RETAINED"
         confidence = float(max(probability) * 100)
@@ -86,10 +64,14 @@ async def predict_churn(data: CustomerData):
         raise HTTPException(status_code=400, detail=str(e))
 
 # Mount static files to serve the frontend UI
-if not os.path.exists('static'):
-    os.makedirs('static')
+static_dir = os.path.join(BASE_DIR, "static")
+if not os.path.exists(static_dir):
+    try:
+        os.makedirs(static_dir)
+    except Exception:
+        pass
     
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
 
 if __name__ == "__main__":
     import uvicorn
